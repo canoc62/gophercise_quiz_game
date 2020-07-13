@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
-	// "time"
+	"time"
 )
 
 func main() {
@@ -22,42 +22,54 @@ func main() {
 		log.Fatalln("Couldn't open the csv file", err)
 		os.Exit(1)
 	}
-
+	
 	quizReader := csv.NewReader(quizData)
 	inputReader := bufio.NewReader(os.Stdin)
+	gameTimer := time.Duration(*quizTime)
 
-	numQuestions, numCorrect := runGame(quizReader, inputReader)
+	numQuestions, numCorrect := runGame(quizReader, inputReader, gameTimer)
 	fmt.Printf("Out of %d questions , you got %d correct!\n", numQuestions, numCorrect)
 }
 
-func runGame(quizReader *csv.Reader, inputReader *bufio.Reader) (int, int) {
+func runGame(quizReader *csv.Reader, inputReader *bufio.Reader, gameLength time.Duration) (int, int) {
 	numberOfQuestions := 0
 	numberCorrect := 0
 
-	timer
-	for {
-		data, err := quizReader.Read()
-		numberOfQuestions += 1
+	fmt.Println("Press 'Enter' to start quiz...")
+	fmt.Scanln()
 
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
+	gameTimer := time.NewTimer(gameLength * time.Second)
 
-		fmt.Println(data[0])
-		answer, err := inputReader.ReadString('\n')
+	G:
+		for {
+			select {
+			case <-gameTimer.C:
+				fmt.Println("Times up!")
+				break G
+			default:
+				data, err := quizReader.Read()
 
-		if err != nil {
-			log.Fatal(err)
-		}
+				if err == io.EOF {
+					break G
+				}
+				if err != nil {
+					log.Fatal(err)
+				}
+				numberOfQuestions += 1
 
-		fmt.Printf("Answer bytes are for string from input is: % x\n", answer)
-		if strings.TrimRight(answer, "\n") == data[1] {
-			numberCorrect += 1
+				fmt.Println(data[0])
+				answer, err := inputReader.ReadString('\n')
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Printf("Answer bytes are for string from input is: % x\n", answer)
+				if strings.TrimRight(answer, "\n") == data[1] {
+					numberCorrect += 1
+				}
+			}
 		}
-	}
 
 	return numberOfQuestions, numberCorrect
 }
